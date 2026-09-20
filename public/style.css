@@ -1,0 +1,209 @@
+const state = {
+  services: [],
+  filtered: [],
+  selected: null,
+  category: 'All',
+  search: ''
+};
+
+const messageBox = document.getElementById('messageBox');
+const servicesList = document.getElementById('servicesList');
+const categoryFilters = document.getElementById('categoryFilters');
+const serviceCount = document.getElementById('serviceCount');
+const selectedServiceName = document.getElementById('selectedServiceName');
+const selectedServicePrice = document.getElementById('selectedServicePrice');
+const orderForm = document.getElementById('orderForm');
+const linkInput = document.getElementById('linkInput');
+const quantityInput = document.getElementById('quantityInput');
+const resultBox = document.getElementById('resultBox');
+const resultContent = document.getElementById('resultContent');
+const searchInput = document.getElementById('searchInput');
+
+function showMessage(message, type = 'info') {
+  messageBox.className = `message-box ${type}`;
+  messageBox.textContent = message;
+}
+
+function getPriceWithMarkup(rate) {
+  const value = Number(rate || 0);
+  return (value * 1.1).toFixed(2);
+}
+
+function renderSelected() {
+  if (!state.selected) {
+    selectedServiceName.textContent = 'No service selected';
+    selectedServicePrice.textContent = 'Price: 0.00';
+    return;
+  }
+
+  selectedServiceName.textContent = `${state.selected.name} (${state.selected.category})`;
+  selectedServicePrice.textContent = `Price: $${getPriceWithMarkup(state.selected.rate)} / unit`;
+}
+
+function renderCategoryFilters() {
+  const categories = ['All', ...new Set(state.services.map((service) => service.category || 'General'))].sort();
+
+  categoryFilters.innerHTML = '';
+
+  categories.forEach((category) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `chip ${state.category === category ? 'active' : ''}`;
+    button.textContent = category;
+    button.addEventListener('click', () => {
+      state.category = category;
+      renderCategoryFilters();
+      renderServices();
+    });
+    categoryFilters.appendChild(button);
+  });
+}
+
+function renderServices() {
+  const filterValue = state.search.trim().toLowerCase();
+
+  state.filtered = state.services.filter((service) => {
+    const matchesCategory = state.category === 'All' || (service.category || 'General') === state.category;
+    const matchesSearch = !filterValue || `${service.name} ${service.category}`.toLowerCase().includes(filterValue);
+    return matchesCategory && matchesSearch;
+  });
+
+  serviceCount.textContent = String(state.filtered.length);
+  servicesList.innerHTML = '';
+
+  if (!state.filtered.length) {
+    servicesList.innerHTML = '<div class="empty-state">No services found for this filter.</div>';
+    return;
+  }
+
+  state.filtered.forEach((service) => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = `service-card ${state.selected && state.selected.id === service.id ? 'selected' : ''}`;
+    card.innerHTML = `
+      <div class="service-header">
+        <div>
+          <strong>${service.name}</strong>
+          <small>${service.category || 'General'}</small>
+        </div>
+        <span class="service-price">$${getPriceWithMarkup(service.rate)}</span>
+      </div>
+      <div class="service-meta">
+        <span>Min: ${service.min}</span>
+        <span>Max: ${service.max}</span>
+      </div>
+    `;
+
+    card.addEventListener('click', () => {
+      state.selected = service;
+      renderSelected();
+      renderServices();
+    });
+
+    servicesList.appendChild(card);
+  });
+}
+
+async function loadServices() {
+  try {
+    showMessage('Loading services...', 'info');
+    const response = await fetch('/api/services');
+    const data = await response.json();
+
+    if (!response.ok || !data || !Array.isArray(data)) {
+      throw new Error(data?.message || 'Unable to load services.');
+    }
+
+    state.services = data;
+    if (!state.selected && state.services.length) {
+      state.selected = state.services[0];
+    }
+
+    renderCategoryFilters();
+    renderServices();
+    renderSelected();
+    showMessage(`Loaded ${state.services.length} available services.`, 'success');
+  } catch (error) {
+    showMessage(error.message || 'Failed to load services.', 'error');
+  }
+}
+
+async function createOrder(event) {
+  event.preventDefault();
+
+  if (!state.selected) {
+    showMessage('Please select a service first.', 'error');
+    return;
+  }
+
+  const payload = {
+    service: state.selected.id,
+    link: linkInput.value.trim(),
+    quantity: Number(quantityInput.value)
+  };
+
+  if (!payload.link || !payload.quantity) {
+    showMessage('Please fill in the link and quantity.', 'error');
+    return;
+  }
+
+  try {
+    showMessage('Creating order...', 'info');
+    const response = await fetch('/api/order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      throw new Error(data.message || 'Unable to create order.');
+    }
+
+    resultBox.classList.remove('hidden');
+    resultContent.innerHTML = `
+      <p><strong>Order ID:</strong> ${data.orderId}</p>
+      <p><strong>Status:</strong> ${data.status}</p>
+      <button type="button" class="secondary-btn" id="statusButton">Check status</button>
+    `;
+
+    document.getElementById('statusButton').addEventListener('click', async () => {
+      await fetchOrderStatus(data.orderId);
+    });
+
+    showMessage('Order created successfully.', 'success');
+  } catch (error) {
+    showMessage(error.message || 'Failed to create order.', 'error');
+  }
+}
+
+async function fetchOrderStatus(orderId) {
+  try {
+    const response = await fetch(`/api/order/${orderId}/status`);
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      throw new Error(data.message || 'Could not fetch status.');
+    }
+
+    resultContent.innerHTML = `
+      <p><strong>Order ID:</strong> ${data.orderId}</p>
+      <p><strong>Status:</strong> ${data.status}</p>
+      <pre>${JSON.stringify(data.raw, null, 2)}</pre>
+    `;
+
+    showMessage(`Order status: ${data.status}`, 'success');
+  } catch (error) {
+    showMessage(error.message || 'Error while fetching status.', 'error');
+  }
+}
+
+searchInput.addEventListener('input', (event) => {
+  state.search = event.target.value;
+  renderServices();
+});
+
+orderForm.addEventListener('submit', createOrder);
+
+loadServices();

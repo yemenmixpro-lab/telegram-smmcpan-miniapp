@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SMMCPAN Mini App</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">SMMCPAN</p>
+          <h1>Mini App</h1>
+        </div>
+        <span class="badge">API + 10%</span>
+      </header>
+
+      <div id="messageBox" class="message-box info">Loading services...</div>
+
+      <section class="filters-panel">
+        <label for="searchInput">Search</label>
+        <input id="searchInput" type="text" placeholder="Service name or category" />
+        <div id="categoryFilters" class="chip-list"></div>
+      </section>
+
+      <section class="services-panel">
+        <div class="panel-header">
+          <h2>Services</h2>
+          <span id="serviceCount">0</span>
+        </div>
+        <div id="servicesList" class="service-list"></div>
+      </section>
+
+      <section class="order-panel">
+        <h2>Create order</h2>
+
+        <div class="selected-box">
+          <span>Selected service</span>
+          <strong id="selectedServiceName">No service selected</strong>
+          <small id="selectedServicePrice">Price: 0.00</small>
+        </div>
+
+        <form id="orderForm">
+          <div class="field-group">
+            <label for="linkInput">Link</label>
+            <input id="linkInput" type="url" placeholder="https://instagram.com/example" required />
+          </div>
+
+          <div class="field-group">
+            <label for="quantityInput">Quantity</label>
+            <input id="quantityInput" type="number" min="1" value="100" required />
+          </div>
+
+          <button type="submit" class="primary-btn">Place order</button>
+        </form>
+      </section>
+
+      <section id="resultBox" class="result-box hidden">
+        <h3>Order result</h3>
+        <div id="resultContent"></div>
+      </section>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

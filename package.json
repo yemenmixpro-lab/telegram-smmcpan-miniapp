@@ -1,0 +1,16 @@
+{
+  "name": "telegram-smmcpan-miniapp",
+  "version": "1.0.0",
+  "description": "Simple Telegram Mini App for SMMCPAN API orders",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-telegram-bot-api": "^0.66.0"
+  }
+}
